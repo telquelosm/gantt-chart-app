@@ -17,7 +17,8 @@
         }
         .gantt-grid {
             display: grid;
-            grid-template-columns: 40px 100px 1fr 120px 100px 100px 60px 60px;
+            /* 修正: 列の幅を調整し、「担当者」列を追加しました */
+            grid-template-columns: 40px 100px minmax(200px, 2fr) 150px 130px 130px 60px 130px 130px;
             align-items: center;
             border-bottom: 1px solid #EAE5E0;
         }
@@ -84,7 +85,7 @@
         <!-- Header -->
         <header class="mb-6">
             <h1 id="project-title" class="text-3xl font-bold text-gray-800">インタラクティブ・ガントチャート</h1>
-            <p class="text-gray-500 mt-2">このアプリケーションは、Excel版ガントチャート作成指針の仕様をウェブ上で再現したものです。左側のグリッドでタスクを編集し、右側のタイムラインでプロジェクトの全体像を視覚的に確認できます。</p>
+            <p class="text-gray-500 mt-2">このアプリケーションは、ガントチャートをウェブ上で再現したものです。左側のグリッドでタスクを編集し、右側のタイムラインでプロジェクトの全体像を視覚的に確認できます。</p>
         </header>
         
         <!-- Global Controls -->
@@ -110,6 +111,7 @@
                     <div class="gantt-grid-cell">No.</div>
                     <div class="gantt-grid-cell">タイプ</div>
                     <div class="gantt-grid-cell">タスク名</div>
+                    <div class="gantt-grid-cell">担当者</div> <!-- 担当者列を追加 -->
                     <div class="gantt-grid-cell">起点日</div>
                     <div class="gantt-grid-cell">期日</div>
                     <div class="gantt-grid-cell">日数</div>
@@ -136,16 +138,24 @@
             const ctx = canvas.getContext('2d');
             const ganttContainer = document.getElementById('gantt-chart-container');
 
+            // 担当者マスターデータ
+            const assignees = [
+                { id: 'yamada', name: '山田太郎' },
+                { id: 'suzuki', name: '鈴木花子' },
+                { id: 'tanaka', name: '田中一郎' },
+                { id: 'sato', name: '佐藤美咲' }
+            ];
+
             let tasks = [
-                { id: 1, type: 'Phase', name: 'フェーズ1: 計画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null },
-                { id: 2, type: 'Task', name: '要件定義', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null },
-                { id: 3, type: 'Task', name: '基本設計', startDate: '2025-07-17', endDate: null, duration: 8, progress: 80, fromDate: null, toDate: null },
-                { id: 4, type: 'Milestone', name: '設計レビュー完了', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null },
-                { id: 5, type: 'Phase', name: 'フェーズ2: 開発', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null },
-                { id: 6, type: 'Task', name: '機能A開発', startDate: '2025-07-30', endDate: null, duration: 15, progress: 60, fromDate: null, toDate: null },
-                { id: 7, type: 'Task', name: '機能B開発', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null },
-                { id: 8, type: 'Task', name: '結合テスト', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null },
-                { id: 9, type: 'Milestone', name: 'アルファ版完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null },
+                { id: 1, type: 'Phase', name: 'フェーズ1: 計画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
+                { id: 2, type: 'Task', name: '要件定義', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null, assignee: 'yamada' },
+                { id: 3, type: 'Task', name: '基本設計', startDate: '2025-07-17', endDate: null, duration: 8, progress: 80, fromDate: null, toDate: null, assignee: 'suzuki' },
+                { id: 4, type: 'Milestone', name: '設計レビュー完了', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
+                { id: 5, type: 'Phase', name: 'フェーズ2: 開発', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
+                { id: 6, type: 'Task', name: '機能A開発', startDate: '2025-07-30', endDate: null, duration: 15, progress: 60, fromDate: null, toDate: null, assignee: 'tanaka' },
+                { id: 7, type: 'Task', name: '機能B開発', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null, assignee: 'sato' },
+                { id: 8, type: 'Task', name: '結合テスト', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null, assignee: 'yamada' },
+                { id: 9, type: 'Milestone', name: 'アルファ版完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
             ];
 
             let state = {
@@ -155,18 +165,21 @@
             const calculateDates = () => {
                 let currentPhase = null;
                 tasks.forEach(task => {
+                    // フェーズのサブタスクをリセット
                     if (task.type === 'Phase') {
                         currentPhase = task;
                         currentPhase.subTasks = [];
                     } else if (currentPhase) {
+                        // 現在のフェーズにサブタスクを追加
                         currentPhase.subTasks.push(task);
                     }
 
+                    // タスクまたはマイルストーンの日付計算
                     if (task.type === 'Task' || task.type === 'Milestone') {
-                        if (task.startDate && task.duration != null) { // Forward scheduling
+                        if (task.startDate && task.duration != null) { // フォワードスケジューリング
                             task.fromDate = new Date(task.startDate + 'T00:00:00');
                             task.toDate = getWorkday(task.fromDate, task.duration);
-                        } else if (task.endDate && task.duration != null) { // Backward scheduling
+                        } else if (task.endDate && task.duration != null) { // バックワードスケジューリング
                             task.toDate = new Date(task.endDate + 'T00:00:00');
                             task.fromDate = getWorkday(task.toDate, -task.duration);
                         } else {
@@ -176,11 +189,12 @@
                     }
                 });
 
+                // フェーズの日付をサブタスクから計算
                 tasks.forEach(task => {
                     if (task.type === 'Phase' && task.subTasks && task.subTasks.length > 0) {
-                        const validDates = task.subTasks.map(t => t.fromDate).filter(Boolean);
-                        if (validDates.length > 0) {
-                            task.fromDate = new Date(Math.min(...validDates));
+                        const validFromDates = task.subTasks.map(t => t.fromDate).filter(Boolean);
+                        if (validFromDates.length > 0) {
+                            task.fromDate = new Date(Math.min(...validFromDates));
                         } else {
                             task.fromDate = null;
                         }
@@ -191,6 +205,10 @@
                         } else {
                            task.toDate = null;
                         }
+                    } else if (task.type === 'Phase' && (!task.subTasks || task.subTasks.length === 0)) {
+                        // サブタスクがないフェーズは日付をクリア
+                        task.fromDate = null;
+                        task.toDate = null;
                     }
                 });
             };
@@ -210,13 +228,19 @@
                     row.innerHTML = `
                         <div class="gantt-grid-cell text-center text-gray-400">${index + 1}</div>
                         <div class="gantt-grid-cell">
-                            <select class="type-select w-full bg-transparent border-0 focus:ring-0 p-0" data-property="type" ${task.type === 'Phase' || task.type === 'Milestone' ? 'disabled' : ''}>
+                            <select class="type-select w-full bg-transparent border-0 focus:ring-0 p-0" data-property="type">
                                 <option value="Task" ${task.type === 'Task' ? 'selected' : ''}>タスク</option>
                                 <option value="Phase" ${task.type === 'Phase' ? 'selected' : ''}>フェーズ</option>
                                 <option value="Milestone" ${task.type === 'Milestone' ? 'selected' : ''}>マイルストーン</option>
                             </select>
                         </div>
                         <div class="gantt-grid-cell task-name" contenteditable="true" data-property="name">${task.name}</div>
+                        <div class="gantt-grid-cell">
+                            <select class="assignee-select w-full bg-transparent border-0 focus:ring-0 p-0" data-property="assignee">
+                                <option value="">未割り当て</option>
+                                ${assignees.map(a => `<option value="${a.id}" ${task.assignee === a.id ? 'selected' : ''}>${a.name}</option>`).join('')}
+                            </select>
+                        </div>
                         <div class="gantt-grid-cell date-cell">
                              <input type="date" value="${task.startDate || ''}" data-property="startDate" class="w-full bg-transparent border-0 focus:ring-0 p-0">
                         </div>
@@ -231,6 +255,9 @@
 
                     // Re-apply select value after innerHTML rewrite
                     row.querySelector('.type-select').value = task.type;
+                    if (task.assignee) {
+                        row.querySelector('.assignee-select').value = task.assignee;
+                    }
                 });
             };
 
@@ -323,7 +350,7 @@
                     const phaseColors = ['#8DB3B8', '#A2C4A4', '#D4B8A2', '#C9AABF'];
                     
                     if (task.type === 'Task') {
-                        const phaseIndex = Math.floor(i / 4) % phaseColors.length; // Simple phase color logic
+                        const phaseIndex = Math.floor(i / 4) % phaseColors.length; 
                         ctx.fillStyle = phaseColors[phaseIndex];
                         ctx.fillRect(x, y + 8, width, rowHeight - 16);
                         
@@ -369,14 +396,15 @@
                 const direction = days > 0 ? 1 : -1;
                 days = Math.abs(days);
                 if (days === 0) {
+                    // Check if the start date itself is a weekend
                     while (date.getDay() === 0 || date.getDay() === 6) {
-                        date.setDate(date.getDate() + direction);
+                        date.setDate(date.getDate() + direction); // Move to next/prev weekday
                     }
                     return date;
                 }
                 while (added < days) {
                     date.setDate(date.getDate() + direction);
-                    if (date.getDay() !== 0 && date.getDay() !== 6) {
+                    if (date.getDay() !== 0 && date.getDay() !== 6) { // 0 = Sunday, 6 = Saturday
                         added++;
                     }
                 }
@@ -392,7 +420,7 @@
             // Event Listeners
             addTaskBtn.addEventListener('click', () => {
                 const newId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
-                tasks.push({ id: newId, type: 'Task', name: '新規タスク', startDate: null, endDate: null, duration: 1, progress: 0, fromDate: null, toDate: null });
+                tasks.push({ id: newId, type: 'Task', name: '新規タスク', startDate: null, endDate: null, duration: 1, progress: 0, fromDate: null, toDate: null, assignee: null });
                 fullRender();
             });
 
@@ -433,7 +461,7 @@
                     } else if (property === 'startDate' || property === 'endDate') {
                         if (value) {
                            task[property] = value;
-                           // Reset the other date
+                           // 日付が入力されたらもう一方の日付をクリアし、フォワード/バックワードの優先度を反映
                            if(property === 'startDate') task.endDate = null;
                            if(property === 'endDate') task.startDate = null;
                         } else {
@@ -441,6 +469,33 @@
                         }
                     } else {
                         task[property] = value;
+                    }
+                    fullRender();
+                }
+            });
+
+            // タイプ選択と担当者選択の変更イベントリスナー
+            taskListEl.addEventListener('change', (e) => {
+                const target = e.target;
+                const rowEl = target.closest('.gantt-grid-body');
+                if (!rowEl) return;
+                
+                const id = parseInt(rowEl.dataset.id);
+                const task = tasks.find(t => t.id === id);
+
+                if (task) {
+                    if (target.classList.contains('type-select')) {
+                        task.type = target.value;
+                        // タイプ変更時に日付関連のプロパティをリセットまたは調整
+                        if (task.type === 'Phase') {
+                            task.startDate = null;
+                            task.endDate = null;
+                            task.duration = null;
+                        }
+                        // タスク名にインデントを適用するため、クラスを再適用
+                        rowEl.className = `gantt-grid gantt-grid-body ${task.type.toLowerCase()}-row`;
+                    } else if (target.classList.contains('assignee-select')) {
+                        task.assignee = target.value || null; // Store assignee ID
                     }
                     fullRender();
                 }
