@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>インタラクティブ・ガントチャート</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Warm Neutrals -->
+    <!-- Application Structure Plan: アプリケーションは、左側にデータ入力用のタスクグリッド、右側に視覚的なタイムラインチャートを配置した2ペインのダッシュボードレイアウトを採用します。この構造は、プロジェクト管理ツールとして標準的で直感的なUXを提供し、データ編集と視覚的確認の分離を明確にします。ヘッダーには、プロジェクト全体に影響するグローバルなコントロール（タスク追加、表示切替など）を配置し、ユーザーが一貫した操作を行えるように設計されています。この構造により、ユーザーはシームレスに計画を立て、進捗を追跡できます。 -->
+    <!-- Visualization & Content Choices: タスクリストはHTMLのGridレイアウトで構築し、直接編集可能なフィールドを提供します。ガントチャートのタイムラインは、Chart.jsやPlotly.jsでは要求される特殊な描画（進捗オーバーレイ、マイルストーンアイコン等）が困難なため、HTML5 Canvas APIを用いてゼロから描画します。これにより、パフォーマンスを維持しつつ、仕様通りの柔軟で詳細な視覚表現を実現します。全ての表示は単一のJavaScriptデータ配列（tasks）から動的に生成され、ユーザーの操作に応じてリアルタイムに再描画されます。タイプの違い（フェーズ、タスク、マイルストーン）は、CSSクラスとCanvas上の描画スタイル（太さ、色、形）で明確に区別します。 -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Inter', 'Noto Sans JP', sans-serif;
+            background-color: #FDFBF8; /* Warm neutral background */
+        }
+        .gantt-grid {
+            display: grid;
+            grid-template-columns: 40px 100px 1fr 120px 100px 100px 60px 60px;
+            align-items: center;
+            border-bottom: 1px solid #EAE5E0;
+        }
+        .gantt-grid-header {
+            background-color: #F5F2EF;
+            color: #786A5E;
+            font-weight: 500;
+            font-size: 0.8rem;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .gantt-grid-cell {
+            padding: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            font-size: 0.9rem;
+            color: #574B40;
+        }
+        .gantt-grid-body .gantt-grid-cell {
+            height: 41px;
+        }
+        .gantt-grid-body:hover {
+            background-color: #F5F2EF;
+        }
+        .phase-row .gantt-grid-cell {
+            font-weight: 600;
+            color: #3D352E;
+            background-color: #ECE8E4;
+        }
+        .phase-row {
+            border-top: 2px solid #D1CBC4;
+            border-bottom: 2px solid #D1CBC4;
+        }
+        .task-row .task-name {
+            padding-left: 2rem;
+        }
+        .milestone-row .task-name {
+            padding-left: 2rem;
+            color: #005A8D;
+            font-style: italic;
+        }
+        [contenteditable]:focus {
+            outline: 2px solid #A89A8E;
+            background-color: #fff;
+            border-radius: 4px;
+        }
+        .disabled-date {
+            color: #B0A69C !important;
+            text-decoration: line-through;
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body class="text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-6 lg:p-8">
+        <!-- Header -->
+        <header class="mb-6">
+            <h1 id="project-title" class="text-3xl font-bold text-gray-800">インタラクティブ・ガントチャート</h1>
+            <p class="text-gray-500 mt-2">このアプリケーションは、Excel版ガントチャート作成指針の仕様をウェブ上で再現したものです。左側のグリッドでタスクを編集し、右側のタイムラインでプロジェクトの全体像を視覚的に確認できます。</p>
+        </header>
+        
+        <!-- Global Controls -->
+        <div class="flex flex-wrap items-center gap-4 mb-4">
+            <button id="addTaskBtn" class="bg-[#8A796A] hover:bg-[#786A5E] text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                <span class="mr-2">+</span>タスクを追加
+            </button>
+            <div class="flex items-center space-x-2">
+                 <input type="checkbox" id="progressToggle" class="h-4 w-4 rounded border-gray-300 text-[#8A796A] focus:ring-[#8A796A]" checked>
+                 <label for="progressToggle" class="text-sm text-gray-600">進捗表示</label>
+            </div>
+             <div class="flex items-center space-x-2">
+                 <button id="todayBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded-lg transition-colors">今日</button>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 h-[65vh] border rounded-lg shadow-md bg-white p-2">
+            <!-- Left Pane: Task Grid -->
+            <div id="task-grid-container" class="overflow-auto relative">
+                <!-- Grid Header -->
+                <div class="gantt-grid gantt-grid-header">
+                    <div class="gantt-grid-cell">No.</div>
+                    <div class="gantt-grid-cell">タイプ</div>
+                    <div class="gantt-grid-cell">タスク名</div>
+                    <div class="gantt-grid-cell">起点日</div>
+                    <div class="gantt-grid-cell">期日</div>
+                    <div class="gantt-grid-cell">日数</div>
+                    <div class="gantt-grid-cell">開始日</div>
+                    <div class="gantt-grid-cell">完了日</div>
+                </div>
+                <!-- Grid Body -->
+                <div id="task-list"></div>
+            </div>
+            <!-- Right Pane: Gantt Chart -->
+            <div class="chart-container" id="gantt-chart-container">
+                <canvas id="gantt-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const taskListEl = document.getElementById('task-list');
+            const addTaskBtn = document.getElementById('addTaskBtn');
+            const progressToggle = document.getElementById('progressToggle');
+            const todayBtn = document.getElementById('todayBtn');
+            const canvas = document.getElementById('gantt-chart');
+            const ctx = canvas.getContext('2d');
+            const ganttContainer = document.getElementById('gantt-chart-container');
+
+            let tasks = [
+                { id: 1, type: 'Phase', name: 'フェーズ1: 計画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null },
+                { id: 2, type: 'Task', name: '要件定義', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null },
+                { id: 3, type: 'Task', name: '基本設計', startDate: '2025-07-17', endDate: null, duration: 8, progress: 80, fromDate: null, toDate: null },
+                { id: 4, type: 'Milestone', name: '設計レビュー完了', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null },
+                { id: 5, type: 'Phase', name: 'フェーズ2: 開発', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null },
+                { id: 6, type: 'Task', name: '機能A開発', startDate: '2025-07-30', endDate: null, duration: 15, progress: 60, fromDate: null, toDate: null },
+                { id: 7, type: 'Task', name: '機能B開発', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null },
+                { id: 8, type: 'Task', name: '結合テスト', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null },
+                { id: 9, type: 'Milestone', name: 'アルファ版完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null },
+            ];
+
+            let state = {
+                showProgress: true,
+            };
+
+            const calculateDates = () => {
+                let currentPhase = null;
+                tasks.forEach(task => {
+                    if (task.type === 'Phase') {
+                        currentPhase = task;
+                        currentPhase.subTasks = [];
+                    } else if (currentPhase) {
+                        currentPhase.subTasks.push(task);
+                    }
+
+                    if (task.type === 'Task' || task.type === 'Milestone') {
+                        if (task.startDate && task.duration != null) { // Forward scheduling
+                            task.fromDate = new Date(task.startDate + 'T00:00:00');
+                            task.toDate = getWorkday(task.fromDate, task.duration);
+                        } else if (task.endDate && task.duration != null) { // Backward scheduling
+                            task.toDate = new Date(task.endDate + 'T00:00:00');
+                            task.fromDate = getWorkday(task.toDate, -task.duration);
+                        } else {
+                            task.fromDate = null;
+                            task.toDate = null;
+                        }
+                    }
+                });
+
+                tasks.forEach(task => {
+                    if (task.type === 'Phase' && task.subTasks && task.subTasks.length > 0) {
+                        const validDates = task.subTasks.map(t => t.fromDate).filter(Boolean);
+                        if (validDates.length > 0) {
+                            task.fromDate = new Date(Math.min(...validDates));
+                        } else {
+                            task.fromDate = null;
+                        }
+                        
+                        const validToDates = task.subTasks.map(t => t.toDate).filter(Boolean);
+                        if (validToDates.length > 0) {
+                           task.toDate = new Date(Math.max(...validToDates));
+                        } else {
+                           task.toDate = null;
+                        }
+                    }
+                });
+            };
+            
+            const renderTaskList = () => {
+                taskListEl.innerHTML = '';
+                tasks.forEach((task, index) => {
+                    const row = document.createElement('div');
+                    row.className = `gantt-grid gantt-grid-body ${task.type.toLowerCase()}-row`;
+                    row.dataset.id = task.id;
+
+                    const fromDateStr = task.fromDate ? task.fromDate.toISOString().split('T')[0] : '';
+                    const toDateStr = task.toDate ? task.toDate.toISOString().split('T')[0] : '';
+                    
+                    const isStartDatePriority = !!task.startDate;
+
+                    row.innerHTML = `
+                        <div class="gantt-grid-cell text-center text-gray-400">${index + 1}</div>
+                        <div class="gantt-grid-cell">
+                            <select class="type-select w-full bg-transparent border-0 focus:ring-0 p-0" data-property="type" ${task.type === 'Phase' || task.type === 'Milestone' ? 'disabled' : ''}>
+                                <option value="Task" ${task.type === 'Task' ? 'selected' : ''}>タスク</option>
+                                <option value="Phase" ${task.type === 'Phase' ? 'selected' : ''}>フェーズ</option>
+                                <option value="Milestone" ${task.type === 'Milestone' ? 'selected' : ''}>マイルストーン</option>
+                            </select>
+                        </div>
+                        <div class="gantt-grid-cell task-name" contenteditable="true" data-property="name">${task.name}</div>
+                        <div class="gantt-grid-cell date-cell">
+                             <input type="date" value="${task.startDate || ''}" data-property="startDate" class="w-full bg-transparent border-0 focus:ring-0 p-0">
+                        </div>
+                        <div class="gantt-grid-cell date-cell ${isStartDatePriority ? 'disabled-date' : ''}">
+                             <input type="date" value="${task.endDate || ''}" data-property="endDate" class="w-full bg-transparent border-0 focus:ring-0 p-0" ${isStartDatePriority ? 'disabled' : ''}>
+                        </div>
+                        <div class="gantt-grid-cell" contenteditable="true" data-property="duration">${task.duration != null ? task.duration : ''}</div>
+                        <div class="gantt-grid-cell text-gray-500">${fromDateStr}</div>
+                        <div class="gantt-grid-cell text-gray-500">${toDateStr}</div>
+                    `;
+                    taskListEl.appendChild(row);
+
+                    // Re-apply select value after innerHTML rewrite
+                    row.querySelector('.type-select').value = task.type;
+                });
+            };
+
+            const renderGanttChart = () => {
+                const rowHeight = 41;
+                const colWidth = 40;
+                const headerHeight = 50;
+
+                const dates = tasks.flatMap(t => [t.fromDate, t.toDate]).filter(Boolean);
+                if (dates.length === 0) {
+                     canvas.width = ganttContainer.clientWidth;
+                     canvas.height = tasks.length * rowHeight + headerHeight;
+                     ctx.clearRect(0, 0, canvas.width, canvas.height);
+                     ctx.fillStyle = '#888';
+                     ctx.textAlign = 'center';
+                     ctx.fillText('表示するデータがありません。', canvas.width / 2, canvas.height / 2);
+                     return;
+                }
+
+                let minDate = new Date(Math.min(...dates));
+                let maxDate = new Date(Math.max(...dates));
+
+                minDate.setDate(minDate.getDate() - 3);
+                maxDate.setDate(maxDate.getDate() + 3);
+
+                let dateRange = [];
+                let currentDate = new Date(minDate);
+                while (currentDate <= maxDate) {
+                    dateRange.push(new Date(currentDate));
+                    currentDate.setDate(currentDate.getDate() + 1);
+                }
+
+                canvas.height = tasks.length * rowHeight + headerHeight;
+                canvas.width = dateRange.length * colWidth;
+                ganttContainer.style.height = `${canvas.height}px`;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Draw header and grid
+                dateRange.forEach((date, i) => {
+                    const x = i * colWidth;
+                    // Day
+                    ctx.fillStyle = '#786A5E';
+                    ctx.textAlign = 'center';
+                    ctx.font = '12px Inter';
+                    ctx.fillText(date.getDate(), x + colWidth / 2, headerHeight - 25);
+                    // Month
+                    if (date.getDate() === 1 || i === 0) {
+                        ctx.fillStyle = '#3D352E';
+                        ctx.font = 'bold 13px Inter';
+                        ctx.fillText(`${date.getMonth() + 1}月`, x + colWidth / 2, headerHeight - 40);
+                    }
+                    // Grid lines
+                    ctx.strokeStyle = '#EAE5E0';
+                    ctx.beginPath();
+                    ctx.moveTo(x, headerHeight);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                });
+
+                // Draw Today line
+                const today = new Date();
+                today.setHours(0,0,0,0);
+                const todayIndex = dateRange.findIndex(d => d.getTime() === today.getTime());
+                if (todayIndex !== -1) {
+                    const x = todayIndex * colWidth + colWidth / 2;
+                    ctx.strokeStyle = '#E53E3E';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.moveTo(x, headerHeight-15);
+                    ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                    ctx.lineWidth = 1;
+                }
+                
+                // Draw tasks
+                tasks.forEach((task, i) => {
+                    const y = headerHeight + i * rowHeight;
+
+                    if (!task.fromDate || !task.toDate) return;
+                    
+                    const startIndex = dateRange.findIndex(d => d.getTime() >= task.fromDate.getTime());
+                    const endIndex = dateRange.findIndex(d => d.getTime() >= task.toDate.getTime());
+
+                    if (startIndex === -1 || endIndex === -1) return;
+
+                    const x = startIndex * colWidth;
+                    const width = (endIndex - startIndex + 1) * colWidth;
+                    
+                    const phaseColors = ['#8DB3B8', '#A2C4A4', '#D4B8A2', '#C9AABF'];
+                    
+                    if (task.type === 'Task') {
+                        const phaseIndex = Math.floor(i / 4) % phaseColors.length; // Simple phase color logic
+                        ctx.fillStyle = phaseColors[phaseIndex];
+                        ctx.fillRect(x, y + 8, width, rowHeight - 16);
+                        
+                        if(state.showProgress && task.progress > 0) {
+                            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+                            ctx.fillRect(x, y + 8, width * (task.progress / 100), rowHeight - 16);
+                        }
+                    } else if (task.type === 'Phase') {
+                         ctx.fillStyle = '#574B40';
+                         ctx.fillRect(x, y + 15, width, rowHeight - 30);
+                         // Phase start marker
+                         ctx.beginPath();
+                         ctx.moveTo(x, y+8);
+                         ctx.lineTo(x, y + rowHeight - 8);
+                         ctx.lineTo(x - 5, y + rowHeight/2);
+                         ctx.closePath();
+                         ctx.fill();
+                         // Phase end marker
+                         ctx.beginPath();
+                         ctx.moveTo(x+width, y+8);
+                         ctx.lineTo(x+width, y + rowHeight - 8);
+                         ctx.lineTo(x+width + 5, y + rowHeight/2);
+                         ctx.closePath();
+                         ctx.fill();
+
+                    } else if (task.type === 'Milestone') {
+                        const centerX = x + colWidth / 2;
+                        const centerY = y + rowHeight / 2;
+                        const size = 10;
+                        ctx.save();
+                        ctx.translate(centerX, centerY);
+                        ctx.rotate(Math.PI / 4);
+                        ctx.fillStyle = '#005A8D';
+                        ctx.fillRect(-size / 2, -size / 2, size, size);
+                        ctx.restore();
+                    }
+                });
+            };
+
+            const getWorkday = (startDate, days) => {
+                let date = new Date(startDate);
+                let added = 0;
+                const direction = days > 0 ? 1 : -1;
+                days = Math.abs(days);
+                if (days === 0) {
+                    while (date.getDay() === 0 || date.getDay() === 6) {
+                        date.setDate(date.getDate() + direction);
+                    }
+                    return date;
+                }
+                while (added < days) {
+                    date.setDate(date.getDate() + direction);
+                    if (date.getDay() !== 0 && date.getDay() !== 6) {
+                        added++;
+                    }
+                }
+                return date;
+            };
+
+            const fullRender = () => {
+                calculateDates();
+                renderTaskList();
+                renderGanttChart();
+            };
+
+            // Event Listeners
+            addTaskBtn.addEventListener('click', () => {
+                const newId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
+                tasks.push({ id: newId, type: 'Task', name: '新規タスク', startDate: null, endDate: null, duration: 1, progress: 0, fromDate: null, toDate: null });
+                fullRender();
+            });
+
+            progressToggle.addEventListener('change', (e) => {
+                state.showProgress = e.target.checked;
+                renderGanttChart();
+            });
+            
+            todayBtn.addEventListener('click', () => {
+                 const today = new Date();
+                 today.setHours(0,0,0,0);
+                 const minDate = new Date(Math.min(...tasks.flatMap(t => [t.fromDate, t.toDate]).filter(Boolean)));
+                 minDate.setDate(minDate.getDate() - 3);
+
+                 const diffTime = Math.abs(today - minDate);
+                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                 
+                 ganttContainer.scrollLeft = diffDays * 40 - ganttContainer.clientWidth / 2;
+            });
+
+            taskListEl.addEventListener('input', (e) => {
+                const target = e.target;
+                const rowEl = target.closest('.gantt-grid-body');
+                if (!rowEl) return;
+                
+                const id = parseInt(rowEl.dataset.id);
+                const task = tasks.find(t => t.id === id);
+                const property = target.dataset.property;
+
+                if (task && property) {
+                    let value = target.value;
+                    if (target.getAttribute('contenteditable')) {
+                        value = target.textContent;
+                    }
+                    
+                    if (property === 'duration') {
+                         task[property] = value ? parseInt(value) : 0;
+                    } else if (property === 'startDate' || property === 'endDate') {
+                        if (value) {
+                           task[property] = value;
+                           // Reset the other date
+                           if(property === 'startDate') task.endDate = null;
+                           if(property === 'endDate') task.startDate = null;
+                        } else {
+                           task[property] = null;
+                        }
+                    } else {
+                        task[property] = value;
+                    }
+                    fullRender();
+                }
+            });
+            
+            new ResizeObserver(fullRender).observe(ganttContainer);
+
+            fullRender();
+        });
+    </script>
+</body>
+</html>
