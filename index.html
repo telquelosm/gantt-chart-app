@@ -85,7 +85,7 @@
         <!-- Header -->
         <header class="mb-6">
             <h1 id="project-title" class="text-3xl font-bold text-gray-800">インタラクティブ・ガントチャート</h1>
-            <p class="text-gray-500 mt-2">このアプリケーションは、Excel版ガントチャート作成指針の仕様をウェブ上で再現したものです。左側のグリッドでタスクを編集し、右側のタイムラインでプロジェクトの全体像を視覚的に確認できます。</p>
+            <p class="text-gray-500 mt-2">このアプリケーションは、ガントチャートをウェブ上で構築したものです。左側のグリッドでタスクを編集し、右側のタイムラインでプロジェクトの全体像を視覚的に確認できます。</p>
         </header>
         
         <!-- Global Controls -->
@@ -159,36 +159,22 @@
 
             // プロジェクトデータ構造
             let projects = {
-                'project_Website': {
-                    name: 'Webサイト（ホームページ）構築',
+                'project_new_product': {
+                    name: '新製品開発プロジェクト',
                     tasks: [
-                        { id: 1, type: 'Phase', name: 'フェーズ1: 計画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
-                        { id: 2, type: 'Task', name: '与件整理', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null, assignee: 'yamada' },
-                        { id: 3, type: 'Task', name: '基本計画', startDate: '2025-07-17', endDate: null, duration: 8, progress: 80, fromDate: null, toDate: null, assignee: 'suzuki' },
-                        { id: 4, type: 'Milestone', name: '計画レビュー完了', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
-                        { id: 5, type: 'Phase', name: 'フェーズ2: 開発', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
-                        { id: 6, type: 'Task', name: '機能A開発', startDate: '2025-07-30', endDate: null, duration: 15, progress: 60, fromDate: null, toDate: null, assignee: 'tanaka' },
-                        { id: 7, type: 'Task', name: '機能B開発', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null, assignee: 'sato' },
-                        { id: 8, type: 'Task', name: 'テスト', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null, assignee: 'yamada' },
-                        { id: 9, type: 'Milestone', name: '完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
+                { id: 1, type: 'Phase', name: 'フェーズ1: 計画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
+                { id: 2, type: 'Task', name: '与件整理', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null, assignee: 'yamada' },
+                { id: 3, type: 'Task', name: '基本計画', startDate: '2025-07-17', endDate: null, duration: 8, progress: 80, fromDate: null, toDate: null, assignee: 'suzuki' },
+                { id: 4, type: 'Milestone', name: '計画レビュー完了', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
+                { id: 5, type: 'Phase', name: 'フェーズ2: 開発', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
+                { id: 6, type: 'Task', name: '機能A開発', startDate: '2025-07-30', endDate: null, duration: 15, progress: 60, fromDate: null, toDate: null, assignee: 'tanaka' },
+                { id: 7, type: 'Task', name: '機能B開発', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null, assignee: 'sato' },
+                { id: 8, type: 'Task', name: 'テスト', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null, assignee: 'yamada' },
+                { id: 9, type: 'Milestone', name: '完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
                     ]
                 },
-                'project_Public_relations_magazine': {
-                    name: '広報誌（フェニックス・コミュニケーション）',
-                    tasks: [
-                        { id: 1, type: 'Phase', name: 'フェーズA: 企画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
-                        { id: 2, type: 'Task', name: '市場調査', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null, assignee: 'yamada' },
-                        { id: 3, type: 'Task', name: '戦略立案', startDate: '2025-07-17', endDate: null, duration: 8, progress: 80, fromDate: null, toDate: null, assignee: 'suzuki' },
-                        { id: 4, type: 'Milestone', name: '戦略承認', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
-                        { id: 5, type: 'Phase', name: 'フェーズ2: 実行', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
-                        { id: 6, type: 'Task', name: '原稿回収・作成', startDate: '2025-07-30', endDate: null, duration: 15, progress: 60, fromDate: null, toDate: null, assignee: 'tanaka' },
-                        { id: 7, type: 'Task', name: '校正（ゲラ）', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null, assignee: 'sato' },
-                        { id: 8, type: 'Task', name: '入稿～印刷', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null, assignee: 'yamada' },
-                        { id: 9, type: 'Milestone', name: '完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
-                    ]
-                },
-                'project_marketing': {
-                    name: 'マーケティング',
+                'project_marketing_campaign': {
+                    name: 'マーケティングキャンペーン',
                     tasks: [
                         { id: 1, type: 'Phase', name: 'フェーズA: 企画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
                         { id: 2, type: 'Task', name: '市場調査', startDate: '2025-09-01', endDate: null, duration: 7, progress: 90, fromDate: null, toDate: null, assignee: 'suzuki' },
