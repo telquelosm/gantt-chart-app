@@ -61,6 +61,36 @@
             color: #005A8D;
             font-style: italic;
         }
+        /* 修正: input[type="number"] のスタイルを追加 */
+        .gantt-grid-cell input[type="number"] {
+            width: 100%;
+            background-color: transparent;
+            border: 0;
+            padding: 0;
+            font-size: 0.9rem;
+            color: #574B40;
+            text-align: center; /* 数字を中央揃えに */
+        }
+        .gantt-grid-cell input[type="number"]:focus {
+            outline: 2px solid #A89A8E;
+            background-color: #fff;
+            border-radius: 4px;
+        }
+        /* input[type="date"] のスタイルは既存のものを維持 */
+        .gantt-grid-cell input[type="date"] {
+            width: 100%;
+            background-color: transparent;
+            border: 0;
+            padding: 0;
+            font-size: 0.9rem;
+            color: #574B40;
+        }
+        .gantt-grid-cell input[type="date"]:focus {
+            outline: 2px solid #A89A8E;
+            background-color: #fff;
+            border-radius: 4px;
+        }
+
         [contenteditable]:focus {
             outline: 2px solid #A89A8E;
             background-color: #fff;
@@ -328,8 +358,12 @@
                         <div class="gantt-grid-cell date-cell ${isStartDatePriority ? 'disabled-date' : ''}">
                              <input type="date" value="${task.endDate || ''}" data-property="endDate" class="w-full bg-transparent border-0 focus:ring-0 p-0" ${isStartDatePriority ? 'disabled' : ''}>
                         </div>
-                        <div class="gantt-grid-cell" contenteditable="true" data-property="duration">${task.duration != null ? task.duration : ''}</div>
-                        <div class="gantt-grid-cell" contenteditable="true" data-property="progress">${task.progress != null ? task.progress : ''}</div>
+                        <div class="gantt-grid-cell">
+                            <input type="number" value="${task.duration != null ? task.duration : ''}" data-property="duration" min="0" class="w-full text-center">
+                        </div>
+                        <div class="gantt-grid-cell">
+                            <input type="number" value="${task.progress != null ? task.progress : ''}" data-property="progress" min="0" max="100" class="w-full text-center">
+                        </div>
                         <div class="gantt-grid-cell text-gray-500">${fromDateStr}</div>
                         <div class="gantt-grid-cell text-gray-500">${toDateStr}</div>
                         <div class="gantt-grid-cell action-buttons">
@@ -549,9 +583,22 @@
                  today.setHours(0,0,0,0);
                  const todayWeekStart = getMondayOfWeek(today);
 
+                 const weekRange = []; // Re-calculate weekRange for scrolling
+                 const minDate = getMondayOfWeek(new Date(Math.min(...tasks.flatMap(t => [t.fromDate, t.toDate]).filter(Boolean))));
+                 let currentWeekStart = new Date(minDate);
+                 const maxDate = new Date(Math.max(...tasks.flatMap(t => [t.fromDate, t.toDate]).filter(Boolean)));
+                 maxDate.setDate(maxDate.getDate() + (7 - maxDate.getDay()));
+                 maxDate.setHours(23,59,59,999);
+
+                 while (currentWeekStart <= maxDate) {
+                    weekRange.push(new Date(currentWeekStart));
+                    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+                 }
+
                  const todayWeekIndex = weekRange.findIndex(ws => ws.getTime() === todayWeekStart.getTime());
                  
                  if (todayWeekIndex !== -1) {
+                     const colWidth = 100; // 週の幅
                      ganttContainer.scrollLeft = todayWeekIndex * colWidth - ganttContainer.clientWidth / 2 + colWidth / 2;
                  }
             });
@@ -567,9 +614,12 @@
                 const property = target.dataset.property;
 
                 if (task && property) {
-                    let value = target.value;
-                    if (target.getAttribute('contenteditable')) {
+                    let value;
+                    // input[type="text"] や contenteditable の場合
+                    if (target.getAttribute('contenteditable') || target.type === 'text') {
                         value = target.textContent;
+                    } else { // input[type="date"] や input[type="number"] の場合
+                        value = target.value;
                     }
                     
                     if (property === 'duration' || property === 'progress') {
