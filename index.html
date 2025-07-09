@@ -17,8 +17,7 @@
         }
         .gantt-grid {
             display: grid;
-            /* 修正: 「進捗度 (%)」列を追加し、列の幅を調整しました */
-            grid-template-columns: 40px 100px minmax(200px, 2fr) 150px 130px 130px 60px 70px 130px 130px 80px; /* 70pxが進捗度 (%) 列 */
+            grid-template-columns: 40px 100px minmax(200px, 2fr) 150px 130px 130px 60px 70px 130px 130px 80px;
             align-items: center;
             border-bottom: 1px solid #EAE5E0;
         }
@@ -141,10 +140,8 @@
         </div>
 
         <!-- Main Content -->
-        <!-- 修正: モバイルでのレイアウトと高さを調整しました -->
         <div class="flex flex-col lg:grid lg:grid-cols-2 gap-4 min-h-[60vh] lg:h-[65vh] border rounded-lg shadow-md bg-white p-2">
             <!-- Left Pane: Task Grid -->
-            <!-- 修正: モバイルでの高さを指定し、flex-growを追加しました -->
             <div id="task-grid-container" class="overflow-auto relative h-[45vh] lg:h-auto flex-grow">
                 <!-- Grid Header -->
                 <div class="gantt-grid gantt-grid-header">
@@ -155,7 +152,7 @@
                     <div class="gantt-grid-cell">起点日</div>
                     <div class="gantt-grid-cell">期日</div>
                     <div class="gantt-grid-cell">日数</div>
-                    <div class="gantt-grid-cell">進捗度 (%)</div> <!-- 新しいヘッダー -->
+                    <div class="gantt-grid-cell">進捗度 (%)</div>
                     <div class="gantt-grid-cell">開始日</div>
                     <div class="gantt-grid-cell">完了日</div>
                     <div class="gantt-grid-cell">操作</div>
@@ -164,7 +161,6 @@
                 <div id="task-list"></div>
             </div>
             <!-- Right Pane: Gantt Chart -->
-            <!-- 修正: モバイルでの高さを指定し、flex-growを追加しました -->
             <div class="chart-container h-[45vh] lg:h-auto flex-grow" id="gantt-chart-container">
                 <canvas id="gantt-chart"></canvas>
             </div>
@@ -186,50 +182,59 @@
 
             // 担当者マスターデータ
             const assignees = [
-                { id: 'morita', name: '守田笙馬' }, // 修正: 山田太郎 -> 守田笙馬
-                { id: 'fukui', name: '福井暸雅' }, // 修正: 鈴木花子 -> 福井暸雅
-                { id: 'yoshida', name: '吉田理' } // 修正: 田中一郎 -> 吉田理, 佐藤美咲を削除
+                { id: 'morita', name: '守田笙馬' },
+                { id: 'fukui', name: '福井暸雅' },
+                { id: 'yoshida', name: '吉田理' }
             ];
 
             // プロジェクトデータ構造
             let projects = {
-                'project_web_site': { // 修正: project_new_product -> project_web_site
-                    name: 'Webサイト構築プロジェクト', // 修正: 新製品開発プロジェクト -> Webサイト構築プロジェクト
+                'project_web_site': {
+                    name: 'Webサイト構築プロジェクト',
                     tasks: [
                         { id: 1, type: 'Phase', name: 'フェーズ1: 計画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
-                        { id: 2, type: 'Task', name: '与件整理', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null, assignee: 'morita' }, // 修正: 要件定義 -> 与件整理
+                        { id: 2, type: 'Task', name: '与件整理', startDate: '2025-07-10', endDate: null, duration: 5, progress: 100, fromDate: null, toDate: null, assignee: 'morita' },
                         { id: 3, type: 'Task', name: '基本設計', startDate: '2025-07-17', endDate: null, duration: 8, progress: 80, fromDate: null, toDate: null, assignee: 'fukui' },
-                        { id: 4, type: 'Milestone', name: '計画レビュー完了', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null }, // 修正: 設計レビュー完了 -> 計画レビュー完了
+                        { id: 4, type: 'Milestone', name: '計画レビュー完了', startDate: '2025-07-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
                         { id: 5, type: 'Phase', name: 'フェーズ2: 開発', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
                         { id: 6, type: 'Task', name: '機能A開発', startDate: '2025-07-30', endDate: null, duration: 15, progress: 60, fromDate: null, toDate: null, assignee: 'yoshida' },
-                        { id: 7, type: 'Task', name: '機能B開発', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null, assignee: 'morita' }, // 修正: 佐藤美咲を削除したため、守田笙馬に割り当て
-                        { id: 8, type: 'Task', name: 'テスト', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null, assignee: 'morita' }, // 修正: 結合テスト -> テスト
-                        { id: 9, type: 'Milestone', name: '完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null }, // 修正: アルファ版完成 -> 完成
+                        { id: 7, type: 'Task', name: '機能B開発', startDate: null, endDate: '2025-08-29', duration: 10, progress: 20, fromDate: null, toDate: null, assignee: 'morita' },
+                        { id: 8, type: 'Task', name: 'テスト', startDate: '2025-08-25', endDate: null, duration: 5, progress: 0, fromDate: null, toDate: null, assignee: 'morita' },
+                        { id: 9, type: 'Milestone', name: '完成', startDate: '2025-08-29', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
                     ]
                 },
-                'project_phoenix_communication': { // 修正: project_marketing_campaign -> project_phoenix_communication
-                    name: '広報誌（フェニックスコミュニケーション）', // 修正: マーケティングキャンペーン -> 広報誌（フェニックスコミュニケーション）
+                'project_phoenix_communication': {
+                    name: '広報誌（フェニックスコミュニケーション）',
                     tasks: [
                         { id: 1, type: 'Phase', name: 'フェーズA: 企画', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
                         { id: 2, type: 'Task', name: '市場調査', startDate: '2025-09-01', endDate: null, duration: 7, progress: 90, fromDate: null, toDate: null, assignee: 'fukui' },
                         { id: 3, type: 'Task', name: '戦略立案', startDate: '2025-09-10', endDate: null, duration: 5, progress: 70, fromDate: null, toDate: null, assignee: 'morita' },
                         { id: 4, type: 'Milestone', name: '戦略承認', startDate: '2025-09-16', endDate: null, duration: 0, progress: 100, fromDate: null, toDate: null, assignee: null },
                         { id: 5, type: 'Phase', name: 'フェーズB: 実行', startDate: null, endDate: null, duration: null, progress: 0, fromDate: null, toDate: null, assignee: null },
-                        { id: 6, type: 'Task', name: '原稿の回収・作成', startDate: '2025-09-17', endDate: null, duration: 10, progress: 40, fromDate: null, toDate: null, assignee: 'yoshida' }, // 修正: 広告素材作成 -> 原稿の回収・作成
-                        { id: 7, type: 'Task', name: '校正', startDate: '2025-09-20', endDate: null, duration: 12, progress: 10, fromDate: null, toDate: null, assignee: 'morita' }, // 修正: SNS運用開始 -> 校正, 佐藤美咲を削除したため、守田笙馬に割り当て
-                        { id: 8, type: 'Milestone', name: '校了～印刷製本～完成', startDate: '2025-10-01', endDate: null, duration: 0, progress: 0, fromDate: null, toDate: null, assignee: null }, // 修正: キャンペーン開始 -> 校了～印刷製本～完成
+                        { id: 6, type: 'Task', name: '原稿の回収・作成', startDate: '2025-09-17', endDate: null, duration: 10, progress: 40, fromDate: null, toDate: null, assignee: 'yoshida' },
+                        { id: 7, type: 'Task', name: '校正', startDate: '2025-09-20', endDate: null, duration: 12, progress: 10, fromDate: null, toDate: null, assignee: 'morita' },
+                        { id: 8, type: 'Milestone', name: '校了～印刷製本～完成', startDate: '2025-10-01', endDate: null, duration: 0, progress: 0, fromDate: null, toDate: null, assignee: null },
                     ]
                 }
             };
 
-            let currentProjectId = 'project_web_site'; // 初期プロジェクトを修正
-            let tasks = projects[currentProjectId].tasks; // tasksは現在のプロジェクトのtasks配列への参照
+            let currentProjectId = 'project_web_site';
+            let tasks = projects[currentProjectId].tasks;
 
             let state = {
                 showProgress: true,
             };
 
-            // プロジェクトのドロップダウンを初期化
+            // Helper function to get the Monday of a given date's week
+            const getMondayOfWeek = (date) => {
+                const d = new Date(date);
+                const day = d.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+                const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Adjust to Monday
+                d.setDate(diff);
+                d.setHours(0, 0, 0, 0); // Normalize to start of day
+                return d;
+            };
+
             const renderProjectSelect = () => {
                 projectSelectEl.innerHTML = '';
                 for (const id in projects) {
@@ -245,7 +250,6 @@
             const calculateDates = () => {
                 let currentPhase = null;
                 tasks.forEach(task => {
-                    // フェーズのサブタスクをリセット
                     if (task.type === 'Phase') {
                         currentPhase = task;
                         currentPhase.subTasks = [];
@@ -253,12 +257,11 @@
                         currentPhase.subTasks.push(task);
                     }
 
-                    // タスクまたはマイルストーンの日付計算
                     if (task.type === 'Task' || task.type === 'Milestone') {
-                        if (task.startDate && task.duration != null) { // フォワードスケジューリング
+                        if (task.startDate && task.duration != null) {
                             task.fromDate = new Date(task.startDate + 'T00:00:00');
                             task.toDate = getWorkday(task.fromDate, task.duration);
-                        } else if (task.endDate && task.duration != null) { // バックワードスケジューリング
+                        } else if (task.endDate && task.duration != null) {
                             task.toDate = new Date(task.endDate + 'T00:00:00');
                             task.fromDate = getWorkday(task.toDate, -task.duration);
                         } else {
@@ -268,7 +271,6 @@
                     }
                 });
 
-                // フェーズの日付をサブタスクから計算
                 tasks.forEach(task => {
                     if (task.type === 'Phase' && task.subTasks && task.subTasks.length > 0) {
                         const validFromDates = task.subTasks.map(t => t.fromDate).filter(Boolean);
@@ -327,7 +329,7 @@
                              <input type="date" value="${task.endDate || ''}" data-property="endDate" class="w-full bg-transparent border-0 focus:ring-0 p-0" ${isStartDatePriority ? 'disabled' : ''}>
                         </div>
                         <div class="gantt-grid-cell" contenteditable="true" data-property="duration">${task.duration != null ? task.duration : ''}</div>
-                        <div class="gantt-grid-cell" contenteditable="true" data-property="progress">${task.progress != null ? task.progress : ''}</div> <!-- 進捗度 (%) 列を追加 -->
+                        <div class="gantt-grid-cell" contenteditable="true" data-property="progress">${task.progress != null ? task.progress : ''}</div>
                         <div class="gantt-grid-cell text-gray-500">${fromDateStr}</div>
                         <div class="gantt-grid-cell text-gray-500">${toDateStr}</div>
                         <div class="gantt-grid-cell action-buttons">
@@ -346,7 +348,7 @@
 
             const renderGanttChart = () => {
                 const rowHeight = 41;
-                const colWidth = 40;
+                const colWidth = 100; // 1週間の幅 (px)
                 const headerHeight = 50;
 
                 const dates = tasks.flatMap(t => [t.fromDate, t.toDate]).filter(Boolean);
@@ -363,37 +365,36 @@
                 let minDate = new Date(Math.min(...dates));
                 let maxDate = new Date(Math.max(...dates));
 
-                minDate.setDate(minDate.getDate() - 3);
-                maxDate.setDate(maxDate.getDate() + 3);
+                // 最小日付をその週の月曜日に調整
+                minDate = getMondayOfWeek(minDate);
 
-                let dateRange = [];
-                let currentDate = new Date(minDate);
-                while (currentDate <= maxDate) {
-                    dateRange.push(new Date(currentDate));
-                    currentDate.setDate(currentDate.getDate() + 1);
+                // 最大日付をその週の日曜日に調整
+                maxDate.setDate(maxDate.getDate() + (7 - maxDate.getDay()));
+                maxDate.setHours(23,59,59,999);
+
+                let weekRange = []; // 週の開始日（月曜日）の配列
+                let currentWeekStart = new Date(minDate);
+                while (currentWeekStart <= maxDate) {
+                    weekRange.push(new Date(currentWeekStart));
+                    currentWeekStart.setDate(currentWeekStart.getDate() + 7);
                 }
 
                 canvas.height = tasks.length * rowHeight + headerHeight;
-                canvas.width = dateRange.length * colWidth;
+                canvas.width = weekRange.length * colWidth;
                 ganttContainer.style.height = `${canvas.height}px`;
 
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-                // Draw header and grid
-                dateRange.forEach((date, i) => {
+                // ヘッダーとグリッドの描画 (週単位)
+                weekRange.forEach((weekStart, i) => {
                     const x = i * colWidth;
-                    // Day
+                    // 週のラベル (例: "7/7週")
                     ctx.fillStyle = '#786A5E';
                     ctx.textAlign = 'center';
                     ctx.font = '12px Inter';
-                    ctx.fillText(date.getDate(), x + colWidth / 2, headerHeight - 25);
-                    // Month
-                    if (date.getDate() === 1 || i === 0) {
-                        ctx.fillStyle = '#3D352E';
-                        ctx.font = 'bold 13px Inter';
-                        ctx.fillText(`${date.getMonth() + 1}月`, x + colWidth / 2, headerHeight - 40);
-                    }
-                    // Grid lines
+                    ctx.fillText(`${weekStart.getMonth() + 1}/${weekStart.getDate()}週`, x + colWidth / 2, headerHeight - 30);
+                    
+                    // グリッド線
                     ctx.strokeStyle = '#EAE5E0';
                     ctx.beginPath();
                     ctx.moveTo(x, headerHeight);
@@ -401,31 +402,42 @@
                     ctx.stroke();
                 });
 
-                // Draw Today line
+                // 「今日」の線の描画
                 const today = new Date();
                 today.setHours(0,0,0,0);
-                const todayIndex = dateRange.findIndex(d => d.getTime() === today.getTime());
-                if (todayIndex !== -1) {
-                    const x = todayIndex * colWidth + colWidth / 2;
+                const todayWeekStart = getMondayOfWeek(today);
+
+                const todayWeekIndex = weekRange.findIndex(ws => ws.getTime() === todayWeekStart.getTime());
+
+                if (todayWeekIndex !== -1) {
+                    // 週の開始日から今日までの日数を計算し、週の幅に比例させてX座標を決定
+                    const daysIntoWeek = Math.floor((today.getTime() - todayWeekStart.getTime()) / (1000 * 60 * 60 * 24));
+                    const x = todayWeekIndex * colWidth + (daysIntoWeek * (colWidth / 7));
+                    
                     ctx.strokeStyle = '#E53E3E';
                     ctx.lineWidth = 2;
                     ctx.beginPath();
-                    ctx.moveTo(x, headerHeight-15);
+                    ctx.moveTo(x, headerHeight - 15);
                     ctx.lineTo(x, canvas.height);
                     ctx.stroke();
                     ctx.lineWidth = 1;
                 }
                 
-                // Draw tasks
+                // タスクバーの描画 (週単位)
                 tasks.forEach((task, i) => {
                     const y = headerHeight + i * rowHeight;
 
                     if (!task.fromDate || !task.toDate) return;
                     
-                    const startIndex = dateRange.findIndex(d => d.getTime() >= task.fromDate.getTime());
-                    const endIndex = dateRange.findIndex(d => d.getTime() >= task.toDate.getTime());
+                    const taskStartMonday = getMondayOfWeek(task.fromDate);
+                    const taskEndMonday = getMondayOfWeek(task.toDate);
 
-                    if (startIndex === -1 || endIndex === -1) return;
+                    const startIndex = weekRange.findIndex(ws => ws.getTime() === taskStartMonday.getTime());
+                    const endIndex = weekRange.findIndex(ws => ws.getTime() === taskEndMonday.getTime());
+
+                    if (startIndex === -1 || endIndex === -1) {
+                        return; // 週範囲外のタスクは描画しない
+                    }
 
                     const x = startIndex * colWidth;
                     const width = (endIndex - startIndex + 1) * colWidth;
@@ -535,13 +547,13 @@
             todayBtn.addEventListener('click', () => {
                  const today = new Date();
                  today.setHours(0,0,0,0);
-                 const minDate = new Date(Math.min(...tasks.flatMap(t => [t.fromDate, t.toDate]).filter(Boolean)));
-                 minDate.setDate(minDate.getDate() - 3);
+                 const todayWeekStart = getMondayOfWeek(today);
 
-                 const diffTime = Math.abs(today - minDate);
-                 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+                 const todayWeekIndex = weekRange.findIndex(ws => ws.getTime() === todayWeekStart.getTime());
                  
-                 ganttContainer.scrollLeft = diffDays * 40 - ganttContainer.clientWidth / 2;
+                 if (todayWeekIndex !== -1) {
+                     ganttContainer.scrollLeft = todayWeekIndex * colWidth - ganttContainer.clientWidth / 2 + colWidth / 2;
+                 }
             });
 
             // グリッド内の入力・変更イベントをまとめて処理
@@ -560,7 +572,7 @@
                         value = target.textContent;
                     }
                     
-                    if (property === 'duration' || property === 'progress') { // progressも数値として扱う
+                    if (property === 'duration' || property === 'progress') {
                          task[property] = value ? parseInt(value) : 0;
                     } else if (property === 'startDate' || property === 'endDate') {
                         if (value) {
